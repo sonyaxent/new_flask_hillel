@@ -9,6 +9,7 @@ faker = "*"
 pandas = "*"
 webargs = "*"
 requests = "*"
+datetime = "*"
 
 [dev-packages]
 pytest = "*"

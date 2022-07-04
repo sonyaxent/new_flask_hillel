@@ -1,16 +1,20 @@
+# coding=utf-8
+import csv
 import datetime
 import pprint
-import random, string
-import requests
-import pandas as pd
-
+import random
+import string
 from http import HTTPStatus
 
 import numpy
-
-from flask import Flask, request, jsonify, Response
+import pandas
+import pandas as pd
+import requests
+from flask import Flask, jsonify, Response
 from webargs import validate, fields
 from webargs.flaskparser import use_kwargs
+from faker import Faker
+from datetime import datetime
 
 if __name__ == "__main__":
     app = Flask(__name__)
@@ -51,7 +55,7 @@ def generate_password():
     password = ""
     for index in range(10, 20):
         password = password + random.choice(characters)
-    return f'Password generated: {password}'
+    return f'Password: {password}'
 
 @app.route("/generate_password_lesson3")
 @use_kwargs(
@@ -125,5 +129,30 @@ def get_average_parameters():
     average_weight = round(numpy.mean(df.Weight), 2)
     return f'<p>The average height is {average_height}. The average weight is {average_weight}</p>'
 
-if __name__ == "__main__":
-    app.run(port=5001, debug=True)
+@app.route('/generate_students')
+@use_kwargs(
+    {
+        'count': fields.Int(
+            missing=10,
+            validate=[validate.Range(min=1, max=1000)]
+        )
+    },
+    location='query'
+)
+def generate_students(count):
+    faker = Faker("EN")
+    student_data = {}
+    for i in range(0, count):
+        student_data[i] = {}
+        student_data[i]['Name'] = faker.name()
+        student_data[i]['Email'] = faker.email()
+        student_data[i]['Password'] = faker.password()
+        student_data[i]['Date of birth'] = faker.date_between_dates(date_start=datetime(1985, 1, 1), date_end=datetime(2001, 1, 1)).year
+    df = pd.DataFrame.from_dict(student_data)
+    df.to_csv(r'generate_students.csv', index=False, header=True)
+    see = pd.read_csv(r'generate_students.csv')
+    return see.to_dict()
+
+
+
+app.run(port=5001, debug=True)
