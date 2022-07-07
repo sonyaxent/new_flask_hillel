@@ -6,7 +6,7 @@ import random
 import string
 from http import HTTPStatus
 
-import numpy
+
 
 import pandas as pd
 import requests
