@@ -1,5 +1,5 @@
 # coding=utf-8
-import csv
+
 import datetime
 import pprint
 import random
@@ -7,7 +7,7 @@ import string
 from http import HTTPStatus
 
 import numpy
-import pandas
+
 import pandas as pd
 import requests
 from flask import Flask, jsonify, Response
@@ -97,22 +97,6 @@ def generate_password_lesson3(length):
 
     return "".join(random.choices(string.ascii_lowercase + string.ascii_uppercase, k=length))
 
-@app.route('/get_astronauts')
-def get_astronauts():
-    url = 'http://api.open-notify.org/astros.json'
-    result = requests.get(url, {})
-    if result.status_code not in (HTTPStatus.OK, ):
-        return Response(
-            'ERROR: Something went wrong',
-            status=result.status_code
-        )
-    result = result.json()
-    statistics = {}
-    for entry in result.get('people', {}):
-        statistics[entry['craft']] = statistics.get(entry['craft'], 0) + 1
-
-    pprint.pprint(statistics)
-    return statistics
 
 
 @app.route("/average_parameters")
@@ -125,9 +109,9 @@ def get_average_parameters():
 
     df = pd.read_csv('hw.csv', names=col_names, skiprows=[0])
 
-    average_height = round(numpy.mean(df.Height), 2)
-    average_weight = round(numpy.mean(df.Weight), 2)
-    return f'<p>The average height is {average_height}. The average weight is {average_weight}</p>'
+    average_height = pd.Series.mean(df.Height)
+    average_weight = pd.Series.mean(df.Weight)
+    return f'<p>The average height is {round(average_height, 2)}. The average weight is {round(average_weight, 2)}</p>'
 
 @app.route('/generate_students')
 @use_kwargs(
@@ -153,6 +137,45 @@ def generate_students(count):
     see = pd.read_csv(r'generate_students.csv')
     return see.to_dict()
 
+@app.route('/get_astronauts')
+def get_astronauts():
+    url = 'http://api.open-notify.org/astros.json'
+    result = requests.get(url, {})
+    if result.status_code not in (HTTPStatus.OK, ):
+        return Response(
+            'ERROR: Something went wrong',
+            status=result.status_code
+        )
+    result = result.json()
+    statistics = {}
+    for entry in result.get('people', {}):
+        statistics[entry['craft']] = statistics.get(entry['craft'], 0) + 1
+
+    pprint.pprint(statistics)
+    return statistics
+
+@app.route('/get_bitcoin_rate')
+@use_kwargs(
+    {
+        'code': fields.Str(load_default='USD'
+        ),
+        'amount': fields.Int(
+            missing=100
+        )
+    },
+    location='query'
+)
+def get_bitcoin_rate(code='USD', amount=100):
+    result = requests.get('https://bitpay.com/api/rates')
+    result = result.json()
+    currency_list = list(filter(lambda item: item['code'] == code, result))
+    currency_rate = currency_list[0]['rate']
+    btc_to_buy = f' Here is the currency rate of {amount}  {code}:  {amount / currency_rate}'
+    pprint.pprint(btc_to_buy)
+
+    return btc_to_buy
 
 
-app.run(port=5001, debug=True)
+
+if __name__ == "__main__":
+    app.run(port=5001, debug=True)
