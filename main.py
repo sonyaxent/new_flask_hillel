@@ -1,16 +1,20 @@
+# coding=utf-8
+
 import datetime
 import pprint
-import random, string
-import requests
-import pandas as pd
-
+import random
+import string
 from http import HTTPStatus
 
-import numpy
 
-from flask import Flask, request, jsonify, Response
+
+import pandas as pd
+import requests
+from flask import Flask, jsonify, Response
 from webargs import validate, fields
 from webargs.flaskparser import use_kwargs
+from faker import Faker
+from datetime import datetime
 
 if __name__ == "__main__":
     app = Flask(__name__)
@@ -51,7 +55,7 @@ def generate_password():
     password = ""
     for index in range(10, 20):
         password = password + random.choice(characters)
-    return f'Password generated: {password}'
+    return f'Password: {password}'
 
 @app.route("/generate_password_lesson3")
 @use_kwargs(
@@ -93,6 +97,46 @@ def generate_password_lesson3(length):
 
     return "".join(random.choices(string.ascii_lowercase + string.ascii_uppercase, k=length))
 
+
+
+@app.route("/average_parameters")
+def get_average_parameters():
+    col_names = [
+        'Id',
+        'Height',
+        'Weight'
+    ]
+
+    df = pd.read_csv('hw.csv', names=col_names, skiprows=[0])
+
+    average_height = pd.Series.mean(df.Height)
+    average_weight = pd.Series.mean(df.Weight)
+    return f'<p>The average height is {round(average_height, 2)}. The average weight is {round(average_weight, 2)}</p>'
+
+@app.route('/generate_students')
+@use_kwargs(
+    {
+        'count': fields.Int(
+            missing=10,
+            validate=[validate.Range(min=1, max=1000)]
+        )
+    },
+    location='query'
+)
+def generate_students(count):
+    faker = Faker("EN")
+    student_data = {}
+    for i in range(0, count):
+        student_data[i] = {}
+        student_data[i]['Name'] = faker.name()
+        student_data[i]['Email'] = faker.email()
+        student_data[i]['Password'] = faker.password()
+        student_data[i]['Date of birth'] = faker.date_between_dates(date_start=datetime(1985, 1, 1), date_end=datetime(2001, 1, 1)).year
+    df = pd.DataFrame.from_dict(student_data)
+    df.to_csv(r'generate_students.csv', index=False, header=True)
+    see = pd.read_csv(r'generate_students.csv')
+    return see.to_dict()
+
 @app.route('/get_astronauts')
 def get_astronauts():
     url = 'http://api.open-notify.org/astros.json'
@@ -110,20 +154,28 @@ def get_astronauts():
     pprint.pprint(statistics)
     return statistics
 
+@app.route('/get_bitcoin_rate')
+@use_kwargs(
+    {
+        'code': fields.Str(load_default='USD'
+        ),
+        'amount': fields.Int(
+            missing=100
+        )
+    },
+    location='query'
+)
+def get_bitcoin_rate(code='USD', amount=100):
+    result = requests.get('https://bitpay.com/api/rates')
+    result = result.json()
+    currency_list = list(filter(lambda item: item['code'] == code, result))
+    currency_rate = currency_list[0]['rate']
+    btc_to_buy = f' Here is the currency rate of {amount}  {code}:  {amount / currency_rate}'
+    pprint.pprint(btc_to_buy)
 
-@app.route("/average_parameters")
-def get_average_parameters():
-    col_names = [
-        'Id',
-        'Height',
-        'Weight'
-    ]
+    return btc_to_buy
 
-    df = pd.read_csv('hw.csv', names=col_names, skiprows=[0])
 
-    average_height = round(numpy.mean(df.Height), 2)
-    average_weight = round(numpy.mean(df.Weight), 2)
-    return f'<p>The average height is {average_height}. The average weight is {average_weight}</p>'
 
 if __name__ == "__main__":
     app.run(port=5001, debug=True)
